@@ -121,10 +121,25 @@ func (c *solanaCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.currentEpoch
 }
 
-func (c *solanaCollector) calcEpochCredits(credits [][]int) int {
-	size := len(credits)
+// alpenglowMarker is the epochCredits entry (u64::MAX, u64::MAX, u64::MAX) that agave inserts at the Alpenglow migration.
+const alpenglowMarker = ^uint64(0)
 
-	return credits[size-1][1] - credits[size-1][2]
+// lastEpochCredits returns the newest epochCredits entry that is not the Alpenglow migration marker.
+func lastEpochCredits(credits [][]uint64) ([]uint64, bool) {
+	for i := len(credits) - 1; i >= 0; i-- {
+		if len(credits[i]) == 3 && credits[i][0] != alpenglowMarker {
+			return credits[i], true
+		}
+	}
+	return nil, false
+}
+
+func (c *solanaCollector) calcEpochCredits(credits [][]uint64) uint64 {
+	entry, ok := lastEpochCredits(credits)
+	if !ok {
+		return 0
+	}
+	return entry[1] - entry[2]
 }
 
 func (c *solanaCollector) mustEmitMetrics(ch chan<- prometheus.Metric, response *rpc.GetVoteAccountsResponse, epoch *rpc.EpochInfo) {
@@ -145,8 +160,12 @@ func (c *solanaCollector) mustEmitMetrics(ch chan<- prometheus.Metric, response 
 			float64(credits), account.VotePubkey, account.NodePubkey)
 		ch <- prometheus.MustNewConstMetric(c.validatorPctVote, prometheus.GaugeValue,
 			float64(credits)/float64(epoch.SlotIndex)*100.0, account.VotePubkey, account.NodePubkey)
+		var totalCredits uint64
+		if entry, ok := lastEpochCredits(account.EpochCredits); ok {
+			totalCredits = entry[1]
+		}
 		ch <- prometheus.MustNewConstMetric(c.validatorTotalCredits, prometheus.GaugeValue,
-			float64(account.EpochCredits[len(account.EpochCredits)-1][1]), account.VotePubkey, account.NodePubkey)
+			float64(totalCredits), account.VotePubkey, account.NodePubkey)
 	}
 	for _, account := range response.Result.Current {
 		ch <- prometheus.MustNewConstMetric(c.validatorDelinquent, prometheus.GaugeValue,
