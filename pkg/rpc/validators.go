@@ -9,14 +9,14 @@ import (
 
 type (
 	VoteAccount struct {
-		ActivatedStake   int64   `json:"activatedStake"`
-		Commission       int     `json:"commission"`
-		EpochCredits     [][]int `json:"epochCredits"`
-		EpochVoteAccount bool    `json:"epochVoteAccount"`
-		LastVote         int     `json:"lastVote"`
-		NodePubkey       string  `json:"nodePubkey"`
-		RootSlot         int     `json:"rootSlot"`
-		VotePubkey       string  `json:"votePubkey"`
+		ActivatedStake   int64      `json:"activatedStake"`
+		Commission       int        `json:"commission"`
+		EpochCredits     [][]uint64 `json:"epochCredits"`
+		EpochVoteAccount bool       `json:"epochVoteAccount"`
+		LastVote         int        `json:"lastVote"`
+		NodePubkey       string     `json:"nodePubkey"`
+		RootSlot         int        `json:"rootSlot"`
+		VotePubkey       string     `json:"votePubkey"`
 	}
 
 	GetVoteAccountsResponse struct {
